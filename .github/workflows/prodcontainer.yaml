@@ -14,20 +14,19 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: tut-cc/murchace
+  IMAGE_NAME: dodolia907/murchace
 
 jobs:
   build-and-push-image:
-    runs-on: ubuntu-latest
-    if: github.repository == 'tut-cc/murchace'
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
     strategy:
       matrix:
         platform:
-          - linux/amd64
-          - linux/arm64
+          - x64
+          - arm64
     steps:
       - name: Prepare
         run: |
