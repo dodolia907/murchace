@@ -27,8 +27,6 @@ jobs:
         platform:
           - linux/amd64
           - linux/arm64
-          - linux/ppc64le
-          - linux/s390x
     steps:
       - name: Prepare
         run: |
