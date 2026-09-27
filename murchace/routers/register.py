@@ -315,4 +315,6 @@ async def place_order(request: Request) -> Response:
     fragment = issued_modal(order_id, summary)
 
     # Clear cart signal on the client and display modal
-    return DatastarResponse([SSE.patch_elements(fragment), SSE.patch_signals({"cart": []})])
+    return DatastarResponse(
+        [SSE.patch_elements(fragment), SSE.patch_signals({"cart": []})]
+    )
