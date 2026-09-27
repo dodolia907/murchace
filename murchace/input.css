@@ -5,6 +5,7 @@ https://tailwindcss.com/docs/detecting-classes-in-source-files
 @import "tailwindcss" source(none);
 
 @source "./**/*.py";
+@source "./**/*.js";
 
 @theme {
   @keyframes scale-50 {
