@@ -170,7 +170,7 @@ def order_session(session: OrderSession) -> Element:
 def confirm_modal(session: OrderSession) -> Element:
     total_price = session.total_price
     signals_init = {
-        "received": total_price,
+        "received": 0,
     }
     return div(id="order-modal-container")[
         div(
@@ -215,25 +215,25 @@ def confirm_modal(session: OrderSession) -> Element:
                         ],
                         div(class_="flex flex-wrap gap-1 justify-end")[
                             button(
-                                data.on("click", f"$received = {total_price}"),
+                                data.on("click", "$received = ($received || 0) + 10"),
                                 type="button",
                                 class_="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded font-medium cursor-pointer",
-                            )["ちょうど"],
+                            )["+10円"],
+                            button(
+                                data.on("click", "$received = ($received || 0) + 100"),
+                                type="button",
+                                class_="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded font-medium cursor-pointer",
+                            )["+100円"],
                             button(
                                 data.on("click", "$received = ($received || 0) + 1000"),
                                 type="button",
                                 class_="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded font-medium cursor-pointer",
                             )["+1,000円"],
                             button(
-                                data.on("click", "$received = ($received || 0) + 5000"),
+                                data.on("click", f"$received = {total_price}"),
                                 type="button",
                                 class_="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded font-medium cursor-pointer",
-                            )["+5,000円"],
-                            button(
-                                data.on("click", "$received = ($received || 0) + 10000"),
-                                type="button",
-                                class_="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded font-medium cursor-pointer",
-                            )["+10,000円"],
+                            )["ちょうど"],
                             button(
                                 data.on("click", "$received = 0"),
                                 type="button",
