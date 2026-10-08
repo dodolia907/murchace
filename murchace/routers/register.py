@@ -4,7 +4,7 @@ from typing import Annotated
 from uuid import UUID, uuid4
 
 from datastar_py import attribute_generator as data
-from datastar_py.fastapi import DatastarResponse
+from datastar_py.fastapi import DatastarResponse, read_signals
 from datastar_py.sse import ServerSentEventGenerator as SSE
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse
@@ -20,6 +20,7 @@ from htpy import (
     figure,
     h2,
     img,
+    input,
     li,
     main,
     p,
@@ -167,6 +168,10 @@ def order_session(session: OrderSession) -> Element:
 
 
 def confirm_modal(session: OrderSession) -> Element:
+    total_price = session.total_price
+    signals_init = {
+        "received": total_price,
+    }
     return div(id="order-modal-container")[
         div(
             id="order-modal",
@@ -176,8 +181,9 @@ def confirm_modal(session: OrderSession) -> Element:
             onclick="this.remove()",
         )[
             div(
+                data.signals(signals_init),
                 id="order-confirm-modal",
-                class_="mx-auto w-5/6 md:w-2/3 xl:w-1/3 h-4/5 p-4 flex flex-col gap-y-2 rounded-lg bg-white relative animate-[scale-50_150ms_ease-in]",
+                class_="mx-auto w-5/6 md:w-2/3 xl:w-1/3 max-h-[90vh] p-4 flex flex-col gap-y-3 rounded-lg bg-white relative animate-[scale-50_150ms_ease-in] overflow-y-auto",
                 onclick="event.stopPropagation()",
             )[
                 button(
@@ -187,23 +193,95 @@ def confirm_modal(session: OrderSession) -> Element:
                 article(
                     class_="grow min-h-0 flex flex-col gap-y-2 px-3 text-center text-lg"
                 )[
-                    h2(class_="font-semibold")["注文の確定"],
+                    h2(class_="font-semibold text-xl")["注文の確定"],
                     _total(
                         session.counted_products.values(),
                         session.total_count,
                         session.total_price_str(),
                     ),
+                    div(class_="mt-2 pt-2 border-t border-gray-200 flex flex-col gap-y-2 text-base")[
+                        div(class_="flex flex-row items-center justify-between font-medium")[
+                            span["お預かり金額:"],
+                            div(class_="flex items-center gap-x-1")[
+                                span["¥"],
+                                input(
+                                    data.bind("received"),
+                                    type="number",
+                                    min="0",
+                                    step="1",
+                                    class_="w-32 px-2 py-1 text-right text-lg font-bold border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500",
+                                ),
+                            ],
+                        ],
+                        div(class_="flex flex-wrap gap-1 justify-end")[
+                            button(
+                                data.on("click", f"$received = {total_price}"),
+                                type="button",
+                                class_="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded font-medium cursor-pointer",
+                            )["ちょうど"],
+                            button(
+                                data.on("click", "$received = ($received || 0) + 1000"),
+                                type="button",
+                                class_="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded font-medium cursor-pointer",
+                            )["+1,000円"],
+                            button(
+                                data.on("click", "$received = ($received || 0) + 5000"),
+                                type="button",
+                                class_="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded font-medium cursor-pointer",
+                            )["+5,000円"],
+                            button(
+                                data.on("click", "$received = ($received || 0) + 10000"),
+                                type="button",
+                                class_="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded font-medium cursor-pointer",
+                            )["+10,000円"],
+                            button(
+                                data.on("click", "$received = 0"),
+                                type="button",
+                                class_="px-2 py-1 text-sm bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded font-medium cursor-pointer",
+                            )["クリア"],
+                        ],
+                        div(class_="flex flex-row items-center justify-between text-lg font-bold pt-1")[
+                            span(
+                                data.class_(
+                                    f"{{'text-red-600': ($received || 0) < {total_price}, 'text-gray-900': ($received || 0) >= {total_price}}}"
+                                )
+                            )[
+                                span(data.show(f"($received || 0) >= {total_price}"))["お釣り:"],
+                                span(data.show(f"($received || 0) < {total_price}"))["不足:"],
+                            ],
+                            span(
+                                data.class_(
+                                    f"{{'text-red-600': ($received || 0) < {total_price}, 'text-green-700': ($received || 0) >= {total_price}}}"
+                                )
+                            )[
+                                span(
+                                    data.show(f"($received || 0) >= {total_price}"),
+                                    data.text(f"'¥' + Math.max(0, ($received || 0) - {total_price}).toLocaleString()"),
+                                )["¥0"],
+                                span(
+                                    data.show(f"($received || 0) < {total_price}"),
+                                    data.text(f"'¥' + Math.max(0, {total_price} - ($received || 0)).toLocaleString()"),
+                                )["¥0"],
+                            ],
+                        ],
+                    ],
                 ],
                 button(
                     data.on("click", "@post('/register')"),
-                    class_="w-full py-4 text-center text-xl font-semibold text-white bg-blue-600 rounded-sm",
+                    data.attr({"disabled": f"($received || 0) < {total_price}"}),
+                    class_="w-full py-4 text-center text-xl font-semibold text-white bg-blue-600 rounded-sm disabled:opacity-50 disabled:cursor-not-allowed",
                 )["確認"],
             ]
         ]
     ]
 
 
-def issued_modal(order_id: int, session: OrderSession) -> Element:
+def issued_modal(
+    order_id: int,
+    session: OrderSession,
+    received: int | None = None,
+    change: int | None = None,
+) -> Element:
     return div(id="order-modal-container")[
         div(
             id="order-modal",
@@ -212,16 +290,18 @@ def issued_modal(order_id: int, session: OrderSession) -> Element:
             aria_modal="true",
         )[
             div(
-                class_="mx-auto w-5/6 md:w-2/3 xl:w-1/3 h-4/5 p-4 flex flex-col gap-y-2 rounded-lg bg-white animate-[scale-95_150ms_ease-in]"
+                class_="mx-auto w-5/6 md:w-2/3 xl:w-1/3 max-h-[90vh] p-4 flex flex-col gap-y-2 rounded-lg bg-white animate-[scale-95_150ms_ease-in] overflow-y-auto"
             )[
                 article(
                     class_="grow min-h-0 flex flex-col gap-y-2 px-3 text-center text-lg"
                 )[
-                    h2(class_="font-semibold")[f"注文番号 #{order_id}"],
+                    h2(class_="font-semibold text-xl")[f"注文番号 #{order_id}"],
                     _total(
                         session.counted_products.values(),
                         session.total_count,
                         session.total_price_str(),
+                        received=received,
+                        change=change,
                     ),
                 ],
                 button(
@@ -241,9 +321,11 @@ def _total(
     counted_products: Iterable[OrderSession.CountedProduct],
     total_count: int,
     total_price: str,
+    received: int | None = None,
+    change: int | None = None,
 ) -> list[Element]:
-    return [
-        ul(class_="grow flex flex-col overflow-y-auto")[
+    elements = [
+        ul(class_="grow flex flex-col overflow-y-auto max-h-48")[
             (
                 li(class_="flex flex-row items-start gap-x-2")[
                     span(class_="break-words")[counted_product.name],
@@ -254,17 +336,31 @@ def _total(
                 for counted_product in counted_products
             )
         ],
-        div[
+        div(class_="border-t border-gray-200 pt-2")[
             p(class_="flex flex-row")[
                 span["計"],
                 span(class_="ml-auto whitespace-nowrap")[f"{total_count} 点"],
             ],
-            p(class_="flex flex-row")[
+            p(class_="flex flex-row font-semibold")[
                 span(class_="break-words")["合計金額"],
                 span(class_="ml-auto")[total_price],
             ],
         ],
     ]
+    if received is not None:
+        elements.append(
+            div(class_="border-t border-gray-200 pt-1 text-base")[
+                p(class_="flex flex-row text-gray-700")[
+                    span["お預かり"],
+                    span(class_="ml-auto")[Product.to_price_str(received)],
+                ],
+                p(class_="flex flex-row font-bold text-gray-900")[
+                    span["お釣り"],
+                    span(class_="ml-auto")[Product.to_price_str(change if change is not None else 0)],
+                ],
+            ]
+        )
+    return elements
 
 
 def error_modal(message: str) -> Element:
@@ -331,6 +427,7 @@ async def get_confirm_dialog(session: SessionDeps):
 
 @router.post("/register")
 async def create_new_session_or_place_order(
+    request: Request,
     queue: PrinterQueueDeps,
     session_key: Annotated[UUID | None, Cookie()] = None,
 ):
@@ -346,8 +443,18 @@ async def create_new_session_or_place_order(
         fragment = error_modal("商品が選択されていません")
         return DatastarResponse(SSE.patch_elements(fragment))
 
+    received: int | None = None
+    signals = await read_signals(request)
+    if signals and "received" in signals:
+        try:
+            val = int(signals["received"])
+            if val >= 0:
+                received = val
+        except (ValueError, TypeError):
+            pass
+
     order_sessions.pop(session_key)
-    res = await _place_order(session, queue)
+    res = await _place_order(session, queue, received=received)
     res.delete_cookie(SESSION_COOKIE_KEY)
     return res
 
@@ -358,16 +465,32 @@ def _create_new_session() -> UUID:
     return session_key
 
 
-async def _place_order(session: SessionDeps, queue: PrinterQueueDeps) -> Response:
+async def _place_order(
+    session: SessionDeps,
+    queue: PrinterQueueDeps,
+    received: int | None = None,
+) -> Response:
     product_ids = [item.product_id for item in session.items.values()]
     order_id = await OrderedItemTable.issue(product_ids)
     # TODO: add a branch for out of stock error
     ordered_at = await OrderTable.insert(order_id)
 
-    # Enqueue receipt for printing (ordered_at from DB ensures accurate timestamp)
-    queue.enqueue(build_receipt_data(order_id, session, ordered_at=ordered_at))
+    received_str = Product.to_price_str(received) if received is not None else None
+    change = max(0, received - session.total_price) if received is not None else None
+    change_str = Product.to_price_str(change) if change is not None else None
 
-    fragment = issued_modal(order_id, session)
+    # Enqueue receipt for printing (ordered_at from DB ensures accurate timestamp)
+    queue.enqueue(
+        build_receipt_data(
+            order_id,
+            session,
+            ordered_at=ordered_at,
+            received_str=received_str,
+            change_str=change_str,
+        )
+    )
+
+    fragment = issued_modal(order_id, session, received=received, change=change)
     return DatastarResponse(SSE.patch_elements(fragment))
 
 
