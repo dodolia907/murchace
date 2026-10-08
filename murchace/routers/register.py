@@ -243,7 +243,10 @@ def confirm_modal(session: OrderSession) -> Element:
                         div(class_="flex flex-row items-center justify-between text-lg font-bold pt-1")[
                             span(
                                 data.class_(
-                                    f"{{'text-red-600': ($received || 0) < {total_price}, 'text-gray-900': ($received || 0) >= {total_price}}}"
+                                    {
+                                        "text-red-600": f"($received || 0) < {total_price}",
+                                        "text-gray-900": f"($received || 0) >= {total_price}",
+                                    }
                                 )
                             )[
                                 span(data.show(f"($received || 0) >= {total_price}"))["お釣り:"],
@@ -251,7 +254,10 @@ def confirm_modal(session: OrderSession) -> Element:
                             ],
                             span(
                                 data.class_(
-                                    f"{{'text-red-600': ($received || 0) < {total_price}, 'text-green-700': ($received || 0) >= {total_price}}}"
+                                    {
+                                        "text-red-600": f"($received || 0) < {total_price}",
+                                        "text-green-700": f"($received || 0) >= {total_price}",
+                                    }
                                 )
                             )[
                                 span(
