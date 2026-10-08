@@ -60,6 +60,8 @@ class ReceiptData:
     store_address: str = ""
     logo_path: str = ""
     ordered_at: datetime | None = None
+    received_str: str | None = None
+    change_str: str | None = None
 
 
 class JapanesePrinter(Escpos):
@@ -173,13 +175,23 @@ def format_and_print_receipt(
     printer.set(align="left", bold=True, double_height=True)
     printer.text_ja(f"{total_line}\n")
 
-    # 8. Divider before Order Number
+    # 8. Received amount & Change (if available)
+    if receipt.received_str is not None:
+        printer.set(align="left", bold=False, normal_textsize=True)
+        printer.text_ja("-" * paper_width + "\n")
+        received_line = pad_line("お預かり", receipt.received_str, total_width=paper_width)
+        printer.text_ja(f"{received_line}\n")
+        if receipt.change_str is not None:
+            change_line = pad_line("お釣り", receipt.change_str, total_width=paper_width)
+            printer.text_ja(f"{change_line}\n")
+
+    # 9. Divider before Order Number
     printer.set(align="left", bold=False, normal_textsize=True)
     printer.text_ja("-" * paper_width + "\n\n")
 
-    # 9. Order Number (Center, Bold, Double size)
+    # 10. Order Number (Center, Bold, Double size)
     printer.set(align="center", bold=True, double_height=True, double_width=True)
     printer.text_ja(f"注文番号 #{receipt.order_id}\n\n")
 
-    # 10. Cut paper
+    # 11. Cut paper
     printer.cut()

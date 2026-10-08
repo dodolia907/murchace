@@ -93,6 +93,23 @@ def test_format_and_print_receipt():
     assert any("2026-09-23 21:00:00" in text for text in printed_texts)
 
 
+def test_format_and_print_receipt_with_received_and_change():
+    """Verify that received amount and change are printed when provided."""
+    printer = MagicMock(spec=JapanesePrinter)
+    receipt = ReceiptData(
+        order_id=99,
+        items=[ReceiptItem(name="ブレンドコーヒー", count=1, unit_price_str="¥400")],
+        total_count=1,
+        total_price_str="¥400",
+        received_str="¥1,000",
+        change_str="¥600",
+    )
+    format_and_print_receipt(printer, receipt, paper_width=42)
+    printed_texts = [call[0][0] for call in printer.text_ja.call_args_list]
+    assert any("お預かり" in text and "¥1,000" in text for text in printed_texts)
+    assert any("お釣り" in text and "¥600" in text for text in printed_texts)
+
+
 def test_format_and_print_receipt_naive_datetime_converted_to_jst():
     """DB (SQLite CURRENT_TIMESTAMP) returns naive datetime in UTC, which must be converted to JST."""
     printer = MagicMock(spec=JapanesePrinter)
